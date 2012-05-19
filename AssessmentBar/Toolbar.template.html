@@ -1,0 +1,77 @@
+ <nowiki>
+<div id='assbar-container'>
+    <div class='assbar-item' data-project="<%= project.name %>">
+        <span class='assbar-item-title'>
+            <%= project.name %>: 
+        </span> 
+        <select id='assbar-project-importance' class='assbar-importance'>
+            <% _.each(project.importanceOptions, function(imp) { %>
+            <option value="<%= imp %>" <% if(imp == data.importance) { %>selected <% } %>><%= imp %></option>
+            <% }) %>
+        </select>
+        <select id='assbar-project-class' class='assbar-class'>
+            <% _.each(project.classOptions, function(cls) { %>
+            <option value="<%= cls %>" <% if(cls == data.class) { %>selected <% } %>><%= cls %></option>
+            <% }) %>
+        </select>
+    </div>
+
+    <div id="assbar-subprojects-list">
+        <% _.each(subProjects, function(importance, subProject) { %>
+            <div class='assbar-item' data-project="<%= subProject %>">
+                <a href="#" class="assbar-subproject-delete">×</a>
+                <span class='assbar-item-title'>
+                    <%= subProject %>: 
+                </span>
+                <select id='assbar-importance' class='assbar-importance'>
+                    <% _.each(project.importanceOptions, function(imp) { %>
+                    <option value="<%= imp %>" <% if(imp == importance) { %>selected <% } %>><%= imp %></option>
+                    <% }) %>
+                </select>
+            </div>
+        <% }) %>
+    </div>
+
+    <a class="assbar-item" id="assbar-add-new-subproject" href="#">New Subproject</a>
+
+    <% _.each(actionItems, function(value, action) { %>
+        <div class='assbar-item' data-action='<%= action %>'>
+            <input type='checkbox' class='assbar-action-item' id='assbar-action-item-<%= action %>' <% if(value) { %>checked <% } %> />
+            <label for='assbar-action-item-<%= action %>' class='assbar-item-check-label'>
+                <%= action %>
+            </label>
+        </div>
+    <% }) %>
+
+    <div id="assbar-actions"> 
+        <a href="#" class="assbar-item" id='assbar-save'>Save</a>
+        <a href="http://yuvi.in/AssessmentBar/r/Unassessed_India_articles/" class="assbar-item" id='assbar-next'>Next Article &raquo;</a>
+    </div>
+
+</div>
+
+<div id="assbar-subproject-template">
+    <% _.each(subProjects, function(importance, subProject) { %>
+        <div class='assbar-item' data-project="<%= subProject %>">
+            <span class='assbar-item-title'>
+                <%= subProject %>: 
+            </span>
+            <select id='assbar-importance' class='assbar-importance'>
+                <% _.each(project.importanceOptions, function(imp) { %>
+                <option value="<%= imp %>" <% if(imp == importance) { %>selected <% } %>><%= imp %></option>
+                <% }) %>
+            </select>
+        </div>
+    <% }) %>
+</div>
+
+<div id="assbar-new-subproject-dialog">
+    <input type="textbox" id="assbar-new-subproject-name" placeholder="Enter project name" />
+
+    <select id='assbar-new-subproject-importance'>
+        <% _.each(project.importanceOptions, function(imp) { %>
+        <option value="<%= imp %>" <% if(imp == "unassessed") { %>selected <% } %>><%= imp %></option>
+        <% }) %>
+    </select>
+</div>
+</nowiki>

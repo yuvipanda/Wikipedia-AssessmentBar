@@ -1,4 +1,3 @@
-/* page: User:Yuvipanda/AssessmentBar.css */
 #assbar-container {
     position: fixed;
     font-family: Helvetica, Verdana, Sans-Serif;
@@ -43,4 +42,8 @@
 
 #assbar-actions {
     float: right;
+}
+
+#assbar-new-subproject-dialog {
+    display: none;
 }

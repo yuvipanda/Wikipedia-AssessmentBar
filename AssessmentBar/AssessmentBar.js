@@ -1,95 +1,29 @@
-/* page: User:Yuvipanda/AssessmentBar.js */
 (function() {
 
-    // Only on mainspace articles
-    if(mw.config.get('wgNamespaceNumber') != 0) {
+    var MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    // Only on mainspace articles and mainspace talk pages
+    if(mw.config.get('wgNamespaceNumber') > 1) {
         return;
     }
     var requires = [
         'jquery.ui.button',
+        'jquery.ui.autocomplete',
         'jquery.ui.dialog',
         'mediawiki.api',
-        '//en.wikipedia.org/w/index.php?title=User:Yuvipanda/js-utils/underscore.js&action=raw&ctype=text/javascript',
-        '//en.wikipedia.org/w/index.php?title=User:Yuvipanda/js-utils/ClientTemplate.js&action=raw&ctype=text/javascript'
+        '//en.wikipedia.org/w/index.php?title=User:YuviPanda/js-utils/underscore.js&action=raw&ctype=text/javascript',
+        '//en.wikipedia.org/w/index.php?title=User:YuviPanda/js-utils/ClientTemplate.js&action=raw&ctype=text/javascript'
     ];
 
-    var cssPath = '//en.wikipedia.org/w/index.php?title=User:Yuvipanda/AssessmentBar.css&action=raw&ctype=text/css';
+    var cssPath = '//en.wikipedia.org/w/index.php?title=User:YuviPanda/AssessmentBar.css&action=raw&ctype=text/css';
 
-    var projectData = {
-        name: 'WP India',
-        inputTemplates: ['WP India', 'WikiProject India'],
-        outputTemplate: 'WP India',
-        subProjects: [
-                'andaman',
-                'andhra',
-                'arunachal',
-                'assam',
-                'bihar',
-                'chandigarh',
-                'chhattisgarh',
-                'dadra',
-                'daman',
-                'delhi',
-                'goa',
-                'gujarat',
-                'haryana',
-                'himachal',
-                'jandk',
-                'jharkhand',
-                'karnataka',
-                'kerala',
-                'lakshya',
-                'madhya',
-                'maharashtra',
-                'manipur',
-                'meghalaya',
-                'mizoram',
-                'nagaland',
-                'odisha',
-                'puducherry',
-                'punjab',
-                'rajasthan',
-                'sikkim',
-                'tamilnadu',
-                'tripura',
-                'uttar',
-                'uttarakand',
-                'bengal',
-                'mumbai',
-                'mangalore',
-                'chennai',
-                'hyderabad',
-                'geography',
-                'states',
-                'districts',
-                'cities',
-                'maps',
-                'history',
-                'literature',
-                'politics',
-                'language',
-                'cinema',
-                'music',
-                'television',
-                'education',
-                'history',
-                'tamil'
-            ],
-        actionNeeded: [
-            'orphan',
-            'needs-infobox',
-            'map-needed',
-            'image-needed',
-            'attention'
-        ],
-        importanceOptions: [
-            'top', 'high', 'mid', 'low', 'unassessed'
-        ],
-        classOptions: [
-            'stub', 'start', 'c', 'b', 'ga', 'a', 'fa', 'unassessed'
-        ]
-    };
-    
+    // Loaded in externally
+    var projectData = window.assBar.projectData; 
+
+    function getArticleTitle(title) {
+        // If in a talk page, returns original page title
+        // Else returns title unmodified
+        return title.replace(/^Talk:/i, "");
+    }
 
     function loadScripts(scripts) {
         var deferreds = [];
@@ -111,11 +45,13 @@
         return $.when.apply($, deferreds);
     }
 
-    var extractorRegex =  new RegExp("{{(?:" + projectData.inputTemplates.join('|') + ")\\s*(?:\\s*\\|\\s*.*=.*\\s*)*\\s*}}");
+    var extractorRegex =  new RegExp("{{(?:" + projectData.inputTemplates.join('|') + ")\\s*(?:\\s*\\|\\s*.*=?.*\\s*)*\\s*}}");
 
     var ass = null; // Current assessment
 
     var api = null; // API wrapper
+
+    var templates = null; // ClientTemplate instance
 
     function Assessment(project, data, rawText, title) {
         this.project = project;
@@ -126,6 +62,9 @@
 
     Assessment.prototype.toTemplate = function() {
         var template;
+        var curDate = new Date();
+        var dateString = MONTH_NAMES[curDate.getMonth()] + " " + curDate.getUTCFullYear();
+        this.data['assess-date'] = dateString;
         template = "{{" + projectData.outputTemplate;
         $.each(this.data, function(key, value) {
             template += "|" + key + "=" + value;
@@ -135,10 +74,14 @@
     }
 
     Assessment.prototype.getDisplayData = function() {
-        var displayData = {};
+        // Defaults in case they don't exist
+        var displayData = {
+            importance: "unassessed",
+            'class': "unassessed"
+        };
         $.each(this.data, function(key, value) {
             if(key === 'importance' || key === 'class') {
-                if($.trim(value) === "") {
+                if(!$.trim(value)) {
                     value = 'unassessed';
                 }
             }
@@ -156,10 +99,7 @@
             if(value.match(/y(es)?/i)) {
                 value = "unassessed";
             }
-            if($.inArray(key, projectData.subProjects) != -1) {
-                subProjects[key] = "";
-            }
-            if($.inArray(key.replace(/-importance$/, ''), projectData.subProjects) != -1) {
+            if($.inArray(key.replace(/-importance$/, ''), projectData.subProjects) != -1 && value != "" && !subProjects[key]) {
                 subProjects[key.replace(/-importance$/, '')] = value;
             }
         });
@@ -175,14 +115,25 @@
         return actionItems;
     }
 
+    Assessment.prototype.removeSubProject = function(subProject) {
+        delete this.data[subProject];
+        delete this.data[subProject + "-importance"];
+    }
+    Assessment.prototype.addSubProject = function(subProject, importance) {
+        this.data[subProject] = "yes";
+        this.data[subProject + "-importance"] = importance;
+    }
     Assessment.prototype.save = function() {
         var d = $.Deferred();
+        // Kill 'auto' fields
+        delete this.data['auto'];
+
         var text = this.rawText.replace(extractorRegex, this.toTemplate());
 
         api.post({
             action: 'edit',
             title: 'Talk:' + this.title,
-            summary: 'Change assessment status for ' + projectData.name + ' (via AssessmentBar)',
+            summary: 'Changed assessment status for ' + projectData.name + ' (via [[User:YuviPanda/AssessmentBar|AssessmentBar]])',
             text: text,
             token: mw.user.tokens.get('editToken')
         }, {
@@ -216,6 +167,9 @@
             $(that).text("Saving...");
             ass.save().done(function() {
                 $(that).text("Save");
+                if(mw.config.get('wgPageName').match(/^Talk/)) {
+                    location.reload(true); // Hard refresh
+                }
             });
             return false;
         });
@@ -242,15 +196,61 @@
                 ass.data[project + "-importance"] = value;
             }
         });
+
+        $("#assbar-new-subproject-name").autocomplete({
+            source: projectData.subProjects,
+            autoFocus: true
+        });
+
+        $("#assbar-add-new-subproject").click(function() {
+            $("#assbar-new-subproject-dialog").dialog({
+                modal: true,
+                title: "Add new Sub Project",
+                buttons: {
+                    "Add": function() {
+                        var subProject = $("#assbar-new-subproject-name").val();
+                        var importance = $("#assbar-new-subproject-importance").val();
+                        if($.inArray(subProject, projectData.subProjects) === -1) {
+                            alert("Invalid subproject chosen!");
+                            return;
+                        }
+                        ass.addSubProject(subProject, importance.replace("unassessed", ""));
+
+                        var dialog = this;
+                        templates.getTemplate('NewSubProject').done(function(template) {
+                            var displayData = {
+                                project: projectData,
+                                subProject: subProject,
+                                importance: importance
+                            };
+                            $(template(displayData)).appendTo("#assbar-subprojects-list");
+                            $(dialog).dialog("close");
+                        });
+                    }
+                }
+            });
+            return false;
+        });
+
+        $(".assbar-subproject-delete").click(function() {
+            var subProject = $(this).parents(".assbar-item").attr('data-project');
+            var sure = confirm("Do you want to delete the sub project " + subProject + "?");
+            if(sure) {
+                ass.removeSubProject(subProject);
+                $(this).parents(".assbar-item").fadeOut();
+            }
+            return false;
+        });
+
     }
 
     mw.loader.load(cssPath, 'text/css');
     loadScripts(requires).done(function() {
             api = new mw.Api();
-            var templates = new ClientTemplate('User:Yuvipanda/AssessmentBar');
+            templates = new ClientTemplate('User:YuviPanda/AssessmentBar');
             $(function() {
 
-                var title = mw.config.get('wgPageName');
+                var title = getArticleTitle(mw.config.get('wgPageName'));
                 api.get({
                     action: "parse",
                     page: 'Talk:' +  title,
@@ -267,7 +267,7 @@
                                 project: projectData,
                                 subProjects: ass.getSubProjects(),
                                 actionItems: ass.getActionItems(),
-                                data: ass.getDisplayData(),
+                                data: ass.getDisplayData()
                             };
                             $(template(displayAss)).appendTo("body");
                             bindAssBarEvents();

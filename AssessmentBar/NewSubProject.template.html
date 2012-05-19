@@ -1,0 +1,15 @@
+ <nowiki>
+<div id="assbar-subproject-template">
+    <div class='assbar-item' data-project="<%= subProject %>">
+        <a href="#" class="assbar-subproject-delete">×</a>
+        <span class='assbar-item-title'>
+            <%= subProject %>: 
+        </span>
+        <select id='assbar-importance' class='assbar-importance'>
+            <% _.each(project.importanceOptions, function(imp) { %>
+            <option value="<%= imp %>" <% if(imp == importance) { %>selected <% } %>><%= imp %></option>
+            <% }) %>
+        </select>
+    </div>
+</div>
+</nowiki>
