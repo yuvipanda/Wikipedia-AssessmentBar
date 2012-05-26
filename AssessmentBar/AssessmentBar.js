@@ -14,7 +14,7 @@
         '//en.wikipedia.org/w/index.php?title=User:YuviPanda/js-utils/ClientTemplate.js&action=raw&ctype=text/javascript'
     ];
 
-    var cssPath = '//en.wikipedia.org/w/index.php?title=User:YuviPanda/AssessmentBar.css&action=raw&ctype=text/css';
+    var cssPath = '//en.wikipedia.org/w/index.php?title={{PREFIX}}/AssessmentBar.css&action=raw&ctype=text/css';
 
     // Loaded in externally
     var projectData = window.assBar.projectData; 
@@ -247,7 +247,7 @@
     mw.loader.load(cssPath, 'text/css');
     loadScripts(requires).done(function() {
             api = new mw.Api();
-            templates = new ClientTemplate('User:YuviPanda/AssessmentBar');
+            templates = new ClientTemplate('{{PREFIX}}');
             $(function() {
 
                 var title = getArticleTitle(mw.config.get('wgPageName'));
